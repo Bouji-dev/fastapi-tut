@@ -1,50 +1,38 @@
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-import secrets       # for sensitive to time
+from fastapi import FastAPI, status, Response
+from enum import Enum
+from typing import Optional
 
 
 app = FastAPI()
-security = HTTPBasic()
 
+class TypeBlogs(str, Enum):
+    mesal1 = 'mesal1'
+    mesal2 = 'mesal2'
+    mesal3 = 'mesal3'
 
-PREDEFINED_USERNAME = 'admin_user'
-PREDEFINED_PASSWORD = 'secret_password'
+@app.get('/blog/{id}/{comment_id}')
+def get_comment(id:int, coment_id:int, valid:bool=True, username:Optional[str]=None):
+    return{'message': f'blog id {id}, comment id {coment_id}, {valid=}, {username=}'}
 
-#-------------
-# Authenticator
-#-------------
+@app.get('/blog/all', status_code=status.HTTP_200_OK)
+def get_blogs(page:Optional[int]=None, page_size:str='test'):
+    return {'message': f'{page=} -- {page_size=}'}
 
-def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
-    '''
-    check validation of username and password  
+@app.get('/blog/type/{type}')
+def get_type_blog(type:TypeBlogs):
+    return {'message': f'blog type is {type}'}
 
-    '''
-    correct_username = secrets.compare_digest(credentials.username , PREDEFINED_USERNAME)
-    correct_password = secrets.compare_digest(credentials.password, PREDEFINED_PASSWORD)
-
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail= ' User information is invalid',
-            headers= {'WWW-Authenticate': 'Basic'}
-        )
-    return credentials.username
-
-
-
-# main root whitout authentication       
 @app.get('/')
-def read_root():
-    return {'message': 'This is the main root'}
+def hello():
+    return 'Hello Ehsan!'
 
+# @app.get('/blog/all')
+# def get_blogs():
+#     return {'message': f'all blogs'}
 
-#------------
-# protected root
-#------------
-
-@app.get('/protected/data')
-def read_protected_data(username:str=Depends(authenticate_user)):
-    '''
-    This root is available for Authenticated users only
-    '''
-    return {'message': f'secret data for user{username}', 'secret': 'API_KEY_12345'}
+@app.get('/blog/{id}', status_code=status.HTTP_200_OK)
+def get_blog(id:int, response:Response):
+    if id > 5:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {'Error': f'blog {id} Not found!'}
+    return {'message': f'Blogs{id}'}
